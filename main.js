@@ -111,7 +111,7 @@ self.on("message", m => {
 						if (gate.owner != m1.author.id && !self.owners.includes(m1.author.id)) return col1.stop("notOwner");
 						gateAddress = gate.address;
 						return m1.channel.send("Deleting this gate, confirm by typing `confirm`, abort with `cancel`!",{
-							embed: new Discord.RichEmbed().setTitle("Stargate").addField("Name:",gate.name,true).addField("Address:",gate.address,true).addField("Owner:",self.users.get(gate.owner)+` ${self.users.get(gate.owner).tag}`,true).addField("Privacy:",gate.privacy,true)
+							embed: new Discord.RichEmbed().setTitle("Stargate").addField("Name:",gate.name,true).addField("Address:",gate.address,true).addField("Owner:",self.users.get(gate.owner)+`\n${self.users.get(gate.owner).tag}`,true).addField("Privacy:",gate.privacy,true)
 						});
 					}
 					case 2: {
@@ -177,7 +177,7 @@ self.on("message", m => {
 				.setTitle("Stargate")
 				.addField("Name:",gates[0].name,true)
 				.addField("Address:",gates[0].address,true)
-				.addField("Owner:",self.users.get(gates[0].owner)+` ${self.users.get(gates[0].owner).tag}`,true)
+				.addField("Owner:",self.users.get(gates[0].owner)+`\n${self.users.get(gates[0].owner).tag}`,true)
 				.addField("Privacy:",gates[0].privacy,true)
 			});
 			if (results > 15) return m.channel.send("Found "+results+" results (15 shown)!\n```\n"+toSend.join("\n")+"\n```");
@@ -204,7 +204,7 @@ self.on("message", m => {
 						if (gate.owner != m1.author.id && !self.owners.includes(m1.author.id)) return col1.stop("notOwner");
 						gateAddress = gate.address;
 						return m1.channel.send("Please tag the new owner of this stargate or type `cancel` to abort!",{
-							embed: new Discord.RichEmbed().setTitle("Stargate").addField("Name:",gate.name,true).addField("Address:",gate.address,true).addField("Owner:",self.users.get(gate.owner)+` ${self.users.get(gate.owner).tag}`,true).addField("Privacy:",gate.privacy,true)
+							embed: new Discord.RichEmbed().setTitle("Stargate").addField("Name:",gate.name,true).addField("Address:",gate.address,true).addField("Owner:",self.users.get(gate.owner)+`\n${self.users.get(gate.owner).tag}`,true).addField("Privacy:",gate.privacy,true)
 						});
 					}
 					case 2: {
@@ -232,7 +232,7 @@ self.on("message", m => {
 	}
 });
 
-init().then(() => self.login("Token"),err => {console.log(err);process.exit();});
+init().then(() => self.login("Token"),e => {console.log(e);process.exit();});
 
 
 /** Thanks Stackoverflow!
