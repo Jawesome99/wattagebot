@@ -48,7 +48,7 @@ self.on("message", m => {
 				.addField("/list","List all public stargates.")
 				.addField("/find","Find a specific stargate by name.")
 				.addField("/changeOwner","Change the owner of a stargate.")
-				.addField("/millenaire",`I'll be right there, ${m.author.username}!`);
+				.addField("/millenaire",`I'll be right there, ${m.author.username}!`)
 				.setTimestamp()
 			});
 			break;
@@ -111,7 +111,7 @@ self.on("message", m => {
 						if (gate.owner != m1.author.id && !self.owners.includes(m1.author.id)) return col1.stop("notOwner");
 						gateAddress = gate.address;
 						return m1.channel.send("Deleting this gate, confirm by typing `confirm`, abort with `cancel`!",{
-							embed: new Discord.RichEmbed().setTitle("Stargate").addField("Name:",gate.name,true).addField("Address:",gate.address,true).addField("Owner:",self.users.get(gate.owner),true).addField("Privacy:",gate.privacy,true)
+							embed: new Discord.RichEmbed().setTitle("Stargate").addField("Name:",gate.name,true).addField("Address:",gate.address,true).addField("Owner:",self.users.get(gate.owner)+` ${self.users.get(gate.owner).tag}`,true).addField("Privacy:",gate.privacy,true)
 						});
 					}
 					case 2: {
@@ -172,19 +172,27 @@ self.on("message", m => {
 			for (let i in gates) {
 				toSend.push(`${gates[i].name}${" ".repeat(length-gates[i].name.length)}\t${gates[i].address}`);
 			}
+			if (results == 1) return m.channel.send("Found a stargate!",{
+				embed: new Discord.RichEmbed()
+				.setTitle("Stargate")
+				.addField("Name:",gates[0].name,true)
+				.addField("Address:",gates[0].address,true)
+				.addField("Owner:",self.users.get(gates[0].owner)+` ${self.users.get(gates[0].owner).tag}`,true)
+				.addField("Privacy:",gates[0].privacy,true)
+			});
 			if (results > 15) return m.channel.send("Found "+results+" results (15 shown)!\n```\n"+toSend.join("\n")+"\n```");
 			return m.channel.send("Found "+results+" results!\n```\n"+toSend.join("\n")+"\n```");
 		}
-		case "changeOwner": {
+		case "changeowner": {
 			let step = 0;
 			m.channel.send("Please enter the name or the address of the Stargate!");
 			let col = m.channel.createMessageCollector(m1 => m1.author == m.author,{time: 90000});
+			let gate;
 			col.on("collect", m1 => {
 				if (m1.content.toLowerCase() == "cancel") return col.stop("time");
 				step++;
 				switch(step) {
 					case 1: {
-						let gate;
 						if (self.addressBook.has(m1.content.toUpperCase())) {
 							gate = self.addressBook.get(m1.content.toUpperCase());
 						} else {
@@ -196,7 +204,7 @@ self.on("message", m => {
 						if (gate.owner != m1.author.id && !self.owners.includes(m1.author.id)) return col1.stop("notOwner");
 						gateAddress = gate.address;
 						return m1.channel.send("Please tag the new owner of this stargate or type `cancel` to abort!",{
-							embed: new Discord.RichEmbed().setTitle("Stargate").addField("Name:",gate.name,true).addField("Address:",gate.address,true).addField("Owner:",self.users.get(gate.owner),true).addField("Privacy:",gate.privacy,true)
+							embed: new Discord.RichEmbed().setTitle("Stargate").addField("Name:",gate.name,true).addField("Address:",gate.address,true).addField("Owner:",self.users.get(gate.owner)+` ${self.users.get(gate.owner).tag}`,true).addField("Privacy:",gate.privacy,true)
 						});
 					}
 					case 2: {
@@ -208,6 +216,7 @@ self.on("message", m => {
 						saveAddressBook();
 						return m1.channel.send("Stargate owner changed!");
 					}
+				}
 			});
 			col.on("end",(collected, reason) => {
 				if (reason == "time") return m.channel.send("Command cancelled.");
@@ -223,7 +232,7 @@ self.on("message", m => {
 	}
 });
 
-init().then(() => self.login("Token"),e => {console.log(e);process.exit();});
+init().then(() => self.login("Token"),err => {console.log(err);process.exit();});
 
 
 /** Thanks Stackoverflow!
