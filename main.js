@@ -29,6 +29,15 @@ function saveAddressBook() {
 	fs.writeFileSync("./gates.json",JSON.stringify(saveGates,"",1),"utf8");
 }
 
+function firstCharUpper(string) {
+	return string.slice(0,1).toUpperCase()+string.slice(1);
+}
+
+function getUser(id) {
+	if (self.users.has(id)) return `${self.users.get(id)}\n${self.users.get(id).tag}`
+	return `Unknown user: <@${id}>\nID: ${id}`;
+}
+
 self.on("ready", () => {
 	self.user.setActivity("Wattage");
 });
@@ -69,9 +78,13 @@ self.on("message", m => {
 					}
 					case 2: {
 						messages.push(m1.content.toUpperCase());
-						return m1.channel.send(`The Stargate's address is \`${m1.content.toUpperCase()}\`! Please enter your privacy setting now!\n\nPublic: Visible in the address book and findable with the find command.\nPrivate: Hidden from find and addressbook, but will be accessable otherhow.`);
+						return m1.channel.send(`The Stargate's address is \`${m1.content.toUpperCase()}\`! Please enter a description for your Stargate now.`);
 					}
 					case 3: {
+						messages.push(m1.content);
+						return m1.channel.send("Please enter your privacy setting now!\n\nPublic: Visible in the address book and findable with the find command.\nPrivate: Hidden from find and addressbook, but will be accessable otherhow.")
+					}
+					case 4: {
 						if (m1.content.toLowerCase() == "public" || m1.content.toLowerCase() == "private") {
 							messages.push(m1.content.toLowerCase());
 							col.stop();
@@ -84,7 +97,7 @@ self.on("message", m => {
 			});
 			col.on("end",(collected, reason) => {
 				if (reason == "time") return m.channel.send("Command cancelled.");
-				self.addressBook.set(messages[2],new Wattage.Stargate({name: messages[1], address: messages[2], privacy: messages[3], owner: messages[0]}));
+				self.addressBook.set(messages[2],new Wattage.Stargate({owner: messages[0], name: messages[1], description: messages[3], address: messages[2], privacy: messages[4]}));
 				return saveAddressBook();
 			});
 			break;
@@ -107,11 +120,18 @@ self.on("message", m => {
 								if (gate.name.toLowerCase().includes(m1.content.toLowerCase())) return true;
 							});
 						}
-						if (!gate) return col1.stop("notFound");
-						if (gate.owner != m1.author.id && !self.owners.includes(m1.author.id)) return col1.stop("notOwner");
+						var gateName = m1.content;
+						if (!gate) return col.stop("notFound");
+						if (gate.owner != m1.author.id && !self.owners.includes(m1.author.id)) return col.stop("notOwner");
 						gateAddress = gate.address;
 						return m1.channel.send("Deleting this gate, confirm by typing `confirm`, abort with `cancel`!",{
-							embed: new Discord.RichEmbed().setTitle("Stargate").addField("Name:",gate.name,true).addField("Address:",gate.address,true).addField("Owner:",self.users.get(gate.owner)+`\n${self.users.get(gate.owner).tag}`,true).addField("Privacy:",gate.privacy,true)
+							embed: new Discord.RichEmbed()
+							.setTitle("Stargate")
+							.setDescription(gate.description)
+							.addField("Name:",gate.name,true)
+							.addField("Address:",gate.address,true)
+							.addField("Owner:",getUser(gate.owner),true)
+							.addField("Privacy:",firstCharUpper(gate.privacy),true)
 						});
 					}
 					case 2: {
@@ -124,8 +144,8 @@ self.on("message", m => {
 			});
 			col.on("end",(collected, reason) => {
 				if (reason == "time") return m.channel.send("Command cancelled.");
-				if (reason == "notOwner") return m1.channel.send("You are not the owner of this gate, you cannot delete it!");
-				if (reason == "notFound") return m1.channel.send(`No gate found with the name ${m1.content}!`);
+				if (reason == "notOwner") return m.channel.send("You are not the owner of this gate, you cannot delete it!");
+				if (reason == "notFound") return m.channel.send(`No gate found with the name ${gateName}!`);
 				self.addressBook.delete(gateAddress);
 				return saveAddressBook();
 			});
@@ -175,10 +195,11 @@ self.on("message", m => {
 			if (results == 1) return m.channel.send("Found a stargate!",{
 				embed: new Discord.RichEmbed()
 				.setTitle("Stargate")
+				.setDescription(gates[0].description)
 				.addField("Name:",gates[0].name,true)
 				.addField("Address:",gates[0].address,true)
-				.addField("Owner:",self.users.get(gates[0].owner)+`\n${self.users.get(gates[0].owner).tag}`,true)
-				.addField("Privacy:",gates[0].privacy,true)
+				.addField("Owner:",getUser(gates[0].owner),true)
+				.addField("Privacy:",firstCharUpper(gates[0].privacy),true)
 			});
 			if (results > 15) return m.channel.send("Found "+results+" results (15 shown)!\n```\n"+toSend.join("\n")+"\n```");
 			return m.channel.send("Found "+results+" results!\n```\n"+toSend.join("\n")+"\n```");
@@ -200,11 +221,17 @@ self.on("message", m => {
 								if (gate.name.toLowerCase().includes(m1.content.toLowerCase())) return true;
 							});
 						}
-						if (!gate) return col1.stop("notFound");
-						if (gate.owner != m1.author.id && !self.owners.includes(m1.author.id)) return col1.stop("notOwner");
+						if (!gate) return col.stop("notFound");
+						if (gate.owner != m1.author.id && !self.owners.includes(m1.author.id)) return col.stop("notOwner");
 						gateAddress = gate.address;
 						return m1.channel.send("Please tag the new owner of this stargate or type `cancel` to abort!",{
-							embed: new Discord.RichEmbed().setTitle("Stargate").addField("Name:",gate.name,true).addField("Address:",gate.address,true).addField("Owner:",self.users.get(gate.owner)+`\n${self.users.get(gate.owner).tag}`,true).addField("Privacy:",gate.privacy,true)
+							embed: new Discord.RichEmbed()
+							.setTitle("Stargate")
+							.setDescription(gate.description)
+							.addField("Name:",gate.name,true)
+							.addField("Address:",gate.address,true)
+							.addField("Owner:",getUser(gate.owner),true)
+							.addField("Privacy:",firstCharUpper(gate.privacy),true)
 						});
 					}
 					case 2: {
@@ -232,7 +259,7 @@ self.on("message", m => {
 	}
 });
 
-init().then(() => self.login("Token"),e => {console.log(e);process.exit();});
+init().then(() => self.login("Token"),err => {console.log(err);process.exit();});
 
 
 /** Thanks Stackoverflow!
