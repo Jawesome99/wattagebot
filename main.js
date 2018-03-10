@@ -85,7 +85,7 @@ function checkServer() {
 		.addField("Ping (EU): ",`${ping} ms`)
 		.setThumbnail(self.user.displayAvatarURL)
 		.setFooter(`All times are CET • Today at ${curTime}`)
-		.setColor("RED")
+		.setColor("RED");
 		if (state.players != 0) {embed.addField("Players:",`${state.players.length}/${state.maxplayers}\n**Players online:**\n${state.players.join("\n")}`,true)}
 		else {embed.addField("Players:",`${state.players.length}/${state.maxplayers}`,true)}
 		embed.addField("Log:",self.wtLog.join("\n"));
