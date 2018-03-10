@@ -1,10 +1,13 @@
 const fs = require("fs");
+const gd = require("gamedig");
 const Wattage = require("./classes/");
 const Discord = require("discord.js");
 const self = new Discord.Client();
 const prefix = "/";
 
 self.owners = ["211227683466641408","114165537566752770"]; // Emosewaj, Timber
+self.wtLog = ["Logging start..."];
+const wtQuery = {type:"minecraftping",host:"73.181.125.119",port:"25565",socketTimeout:2500}
 
 function init() {
 	return new Promise((resolve,reject) => {
@@ -38,17 +41,85 @@ function getUser(id) {
 	return `Unknown user: <@${id}>\nID: ${id}`;
 }
 
+function checkServer() {
+	let pre = process.hrtime();
+	gd.query(wtQuery, (e,state) => {
+		if (e) {
+			console.error("Couldn't connect to Wattage server",e);
+			return self.channels.get("421798550083731467").fetchMessage("421818347445813269").then(m => {
+				let embed = m.embeds.first()
+				embed.description = embed.description+"\n\n**Couldn't connect to the server! Data may be outdated!**";
+				return m.edit({embed});
+			});
+		}
+
+		let ping = process.hrtime(pre);
+		ping = parseInt(((ping[0]*1000000000)+ping[1])/1000000)
+
+		for (let i in state.players) {
+			state.players[i] = state.players[i].name;
+		}
+		state.players = state.players.sort();
+
+		if (!self.lastPlayers) self.lastPlayers = state.players;
+		for (let i in state.players) {
+			if (!self.lastPlayers.includes(state.players[i])) addToLog(`:inbox_tray: ${state.players[i]} joined the game.`);
+		}
+		for (let i in self.lastPlayers) {
+			if (!state.players.includes(self.lastPlayers[i])) addToLog(`:outbox_tray: ${self.lastPlayers[i]} left the game.`);
+		}
+
+		for (let i in state.players) {
+			self.lastPlayers[i] = state.players[i];
+		}
+
+		let embed = new Discord.RichEmbed()
+		.setTitle("Official Server")
+		.setDescription(`IP: ${wtQuery.host}:${wtQuery.port}`)
+		.addField("Ping (EU): ",`${ping} ms`)
+		.setThumbnail(self.user.displayAvatarURL)
+		.setFooter("All times are CET")
+		.setColor("RED")
+		.setTimestamp();
+		if (state.players != 0) {embed.addField("Players:",`${state.players.length}/${state.maxplayers}\n**Players online:**\n${state.players.join("\n")}`,true)}
+		else {embed.addField("Players:",`${state.players.length}/${state.maxplayers}`,true)}
+		embed.addField("Log:",self.wtLog.join("\n"));
+
+		return self.channels.get("421798550083731467").fetchMessage("421818347445813269").then(m => {
+			return m.edit({embed});
+		});
+	});
+}
+
+function addToLog(message) {
+	if (self.wtLog.length = 5) self.wtLog.shift()
+	return self.wtLog.push(`${getTime()} ${message}`);
+}
+
+function getTime() {
+	let date = new Date();
+	let hour = date.getHours().toString(); if(hour.length == 1){hour = ("0"+hour)}
+	let minute = date.getMinutes().toString(); if(minute.length == 1){minute = ("0"+minute)}
+	return (`[${hour}:${minute}]`);
+}
+
+
 self.on("ready", () => {
 	self.user.setActivity("Wattage");
+	checkServer();
+	setInterval(() => checkServer(),60000);
 });
 
 self.on("message", m => {
-	if (m.author == self.user || (m.channel.type != "group" && m.channel.type != "dm") || !m.content.startsWith(prefix)) return;
+	if (m.author == self.user || (m.channel.type != "text" && m.channel.type != "dm") || !m.content.startsWith(prefix)) return;
 	
 	let cmd = m.content.split(" ")[0].slice(prefix.length);
 	let args = m.content.split(" ").slice(1);
 	
 	switch(cmd.toLowerCase()) {
+		case "test": {
+			return checkServer();
+		}
 		case "help": {
 			return m.channel.send({
 				embed: new Discord.RichEmbed().setAuthor("Commands",self.user.displayAvatarURL)
@@ -257,6 +328,10 @@ self.on("message", m => {
 			return m.channel.send(`I'll be right there, ${m.author.username}!\n`.repeat(8));
 		}
 	}
+});
+
+process.on("uncaughtException",e => {
+	self.channels.get("419968973287981061").send("Crashed!\n"+e);
 });
 
 init().then(() => self.login("Token"),err => {console.log(err);process.exit();});
