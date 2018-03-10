@@ -6,7 +6,7 @@ const self = new Discord.Client();
 const prefix = "/";
 
 self.owners = ["211227683466641408","114165537566752770"]; // Emosewaj, Timber
-self.wtLog = ["Logging start..."];
+self.wtLog = []; addToLog("Logging start...")
 const wtQuery = {type:"minecraftping",host:"73.181.125.119",port:"25565",socketTimeout:2500}
 
 function init() {
@@ -69,18 +69,23 @@ function checkServer() {
 			if (!state.players.includes(self.lastPlayers[i])) addToLog(`:outbox_tray: ${self.lastPlayers[i]} left the game.`);
 		}
 
-		for (let i in state.players) {
-			self.lastPlayers[i] = state.players[i];
+		if (state.players.length == 0) {self.lastPlayers = []}
+		else {
+			for (let i in state.players) {
+				self.lastPlayers[i] = state.players[i];
+			}
 		}
+
+		let curTime = getTime();
+		curTime = curTime.slice(1,curTime.length-1);
 
 		let embed = new Discord.RichEmbed()
 		.setTitle("Official Server")
 		.setDescription(`IP: ${wtQuery.host}:${wtQuery.port}`)
 		.addField("Ping (EU): ",`${ping} ms`)
 		.setThumbnail(self.user.displayAvatarURL)
-		.setFooter("All times are CET")
+		.setFooter(`All times are CET • Today at ${curTime}`)
 		.setColor("RED")
-		.setTimestamp();
 		if (state.players != 0) {embed.addField("Players:",`${state.players.length}/${state.maxplayers}\n**Players online:**\n${state.players.join("\n")}`,true)}
 		else {embed.addField("Players:",`${state.players.length}/${state.maxplayers}`,true)}
 		embed.addField("Log:",self.wtLog.join("\n"));
@@ -92,7 +97,7 @@ function checkServer() {
 }
 
 function addToLog(message) {
-	if (self.wtLog.length = 5) self.wtLog.shift()
+	if (self.wtLog.length = 15) self.wtLog.shift()
 	return self.wtLog.push(`${getTime()} ${message}`);
 }
 
