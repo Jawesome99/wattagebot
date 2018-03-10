@@ -69,8 +69,8 @@ function checkServer() {
 			if (!state.players.includes(self.lastPlayers[i])) addToLog(`:outbox_tray: ${self.lastPlayers[i]} left the game.`);
 		}
 
-		if (state.players.length == 0) {self.lastPlayers = []}
-		else {
+		self.lastPlayers = []
+		if (!state.players.length == 0) {
 			for (let i in state.players) {
 				self.lastPlayers[i] = state.players[i];
 			}
@@ -86,8 +86,8 @@ function checkServer() {
 		.setThumbnail(self.user.displayAvatarURL)
 		.setFooter(`All times are CET • Today at ${curTime}`)
 		.setColor("RED");
-		if (state.players != 0) {embed.addField("Players:",`${state.players.length}/${state.maxplayers}\n**Players online:**\n${state.players.join("\n")}`,true)}
-		else {embed.addField("Players:",`${state.players.length}/${state.maxplayers}`,true)}
+		if (state.players != 0) {embed.addField("Players:",`${state.players.length}/${state.maxplayers}\n**Players online:**\n${state.players.join("\n")}`)}
+		else {embed.addField("Players:",`${state.players.length}/${state.maxplayers}`)}
 		embed.addField("Log:",self.wtLog.join("\n"));
 
 		return self.channels.get("421798550083731467").fetchMessage("421818347445813269").then(m => {
