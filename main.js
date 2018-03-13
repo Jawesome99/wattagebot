@@ -1,13 +1,13 @@
 const fs = require("fs");
-const gd = require("gamedig");
+const mcp = require("minecraft-pinger");
 const Wattage = require("./classes/");
 const Discord = require("discord.js");
 const self = new Discord.Client();
 const prefix = "/";
 
 self.owners = ["211227683466641408","114165537566752770"]; // Emosewaj, Timber
-self.wtLog = []; addToLog("Logging start...")
-const wtQuery = {type:"minecraftping",host:"73.181.125.119",port:"25565",socketTimeout:2500}
+self.wtLog = []; addToLog("Logging started");
+const wtQuery = {host:'73.181.125.119',port:25565}
 
 function init() {
 	return new Promise((resolve,reject) => {
@@ -42,58 +42,53 @@ function getUser(id) {
 }
 
 function checkServer() {
-	let pre = process.hrtime();
-	gd.query(wtQuery, (e,state) => {
-		if (e) {
-			console.error("Couldn't connect to Wattage server",e);
-			return self.channels.get("421798550083731467").fetchMessage("421818347445813269").then(m => {
-				let embed = m.embeds.first()
-				embed.description = embed.description+"\n\n**Couldn't connect to the server! Data may be outdated!**";
-				return m.edit({embed});
-			});
-		}
-
-		let ping = process.hrtime(pre);
-		ping = parseInt(((ping[0]*1000000000)+ping[1])/1000000)
-
-		for (let i in state.players) {
-			state.players[i] = state.players[i].name;
-		}
-		state.players = state.players.sort();
-
-		if (!self.lastPlayers) self.lastPlayers = state.players;
-		for (let i in state.players) {
-			if (!self.lastPlayers.includes(state.players[i])) addToLog(`:inbox_tray: ${state.players[i]} joined the game.`);
-		}
-		for (let i in self.lastPlayers) {
-			if (!state.players.includes(self.lastPlayers[i])) addToLog(`:outbox_tray: ${self.lastPlayers[i]} left the game.`);
-		}
-
-		self.lastPlayers = []
-		if (!state.players.length == 0) {
-			for (let i in state.players) {
-				self.lastPlayers[i] = state.players[i];
-			}
-		}
-
-		let curTime = getTime();
-		curTime = curTime.slice(1,curTime.length-1);
-
+	mcp.ping(wtQuery.host,wtQuery.port,(e, res) => {
+		if (e) throw e;
+		let players = res.players.sample;
+		players = parsePlayers(players);
+		if (players != "") players = "\n**Players online:**\n"+players;
 		let embed = new Discord.RichEmbed()
-		.setTitle("Official Server")
-		.setDescription(`IP: ${wtQuery.host}:${wtQuery.port}`)
-		.addField("Ping (EU): ",`${ping} ms`)
+		.setTitle("Official Server Information")
+		.setDescription(`"${res.description}"\nIP: \`${wtQuery.host}:${wtQuery.port}\``)
+		.addField("Ping (EU):",`${res.ping} ms`)
+		.addField("Players:",`${res.players.online}/${res.players.max}${players}`)
+		.addField("Log:",self.wtLog.join("\n"))
 		.setThumbnail(self.user.displayAvatarURL)
-		.setFooter(`All times are CET • Today at ${curTime}`)
+		.setFooter(`All times are CET • Today at ${getTime().slice(1,getTime().length-1)}`)
 		.setColor("RED");
-		if (state.players != 0) {embed.addField("Players:",`${state.players.length}/${state.maxplayers}\n**Players online:**\n${state.players.join("\n")}`)}
-		else {embed.addField("Players:",`${state.players.length}/${state.maxplayers}`)}
-		embed.addField("Log:",self.wtLog.join("\n"));
-
-		return self.channels.get("421798550083731467").fetchMessage("421818347445813269").then(m => {
-			return m.edit({embed});
+		self.channels.get("421798550083731467").fetchMessage("421818347445813269").then(m => {
+			m.edit({embed});
 		});
+		return setTimeout(() => checkServer(),60000);
 	});
+}
+
+function parsePlayers(players) {
+	if (!self.wtLastPlayers) {
+		self.wtLastPlayers = new Discord.Collection();
+		for (let i in players) {
+			self.wtLastPlayers.set(players[i].id,players[i]);
+		}
+	}
+	if (players == undefined) players = [];
+	for (let i in players) {
+		if (!self.wtLastPlayers.has(players[i].id)) {
+			self.wtLastPlayers.set(players[i].id,players[i]);
+			addToLog(`:inbox_tray: ${players[i].name} joined the game.`);
+		}
+	}
+	self.wtLastPlayers.forEach(p => {
+		if (!players.includes(p)) {
+			self.wtLastPlayers.delete(p.id);
+			addToLog(`:outbox_tray: ${p.name} left the game.`);
+		}
+	});
+
+	let returnString = "";
+	for (let i in players) {
+		returnString += players[i].name+"\n";
+	}
+	return returnString;
 }
 
 function addToLog(message) {
@@ -112,7 +107,6 @@ function getTime() {
 self.on("ready", () => {
 	self.user.setActivity("Wattage");
 	checkServer();
-	setInterval(() => checkServer(),60000);
 });
 
 self.on("message", m => {
@@ -336,7 +330,7 @@ self.on("message", m => {
 });
 
 process.on("uncaughtException",e => {
-	self.channels.get("419968973287981061").send("Crashed!\n"+e);
+	throw e;
 });
 
 init().then(() => self.login("Token"),err => {console.log(err);process.exit();});
