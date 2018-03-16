@@ -64,26 +64,29 @@ function checkServer() {
 }
 
 function parsePlayers(players) {
+	if (players == undefined) players = [];
+	let playersMap = new Map();
+	for (let i in players) {
+		playersMap.set(players[i].id,players[i]);
+	}
 	if (!self.wtLastPlayers) {
 		self.wtLastPlayers = new Discord.Collection();
 		for (let i in players) {
 			self.wtLastPlayers.set(players[i].id,players[i]);
 		}
 	}
-	if (players == undefined) players = [];
-	for (let i in players) {
-		if (!self.wtLastPlayers.has(players[i].id)) {
-			self.wtLastPlayers.set(players[i].id,players[i]);
-			addToLog(`:inbox_tray: ${players[i].name} joined the game.`);
+	playersMap.forEach(p => {
+		if (!self.wtLastPlayers.has(p.id)) {
+			self.wtLastPlayers.set(p.id,p);
+			addToLog(`:inbox_tray: ${p.name} joined the game.`);
 		}
-	}
+	});
 	self.wtLastPlayers.forEach(p => {
-		if (!players.includes(p)) {
+		if (!playersMap.has(p.id)) {
 			self.wtLastPlayers.delete(p.id);
 			addToLog(`:outbox_tray: ${p.name} left the game.`);
 		}
 	});
-
 	let returnString = "";
 	for (let i in players) {
 		returnString += players[i].name+"\n";
