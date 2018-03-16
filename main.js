@@ -252,7 +252,7 @@ self.on("message", m => {
 			});
 			gates.sort(sortBy("name",false,function(a){return a.toUpperCase()}));
 
-			if (!gates[0]) return m.channel.send(`No Stargate with the name ${args.join} found!`);
+			if (!gates[0]) return m.channel.send(`No Stargate with the name ${args.join()} found!`);
 			let results = gates.length;	// save total amount of results for later
 			if (gates.length > 15) gates = gates.slice(0,15);	// limit search results to 15 elements
 			
