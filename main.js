@@ -42,7 +42,6 @@ function getUser(id) {
 }
 
 function checkServer() {
-	return setTimeout(() => checkServer(),60000);
 	mcp.ping(wtQuery.host,wtQuery.port,(e, res) => {
 		if (e) throw e;
 		let players = res.players.sample;
@@ -61,6 +60,7 @@ function checkServer() {
 			m.edit({embed});
 		});
 	});
+	return setTimeout(() => checkServer(),60000);
 }
 
 function parsePlayers(players) {
@@ -336,7 +336,7 @@ process.on("uncaughtException",e => {
 	throw e;
 });
 
-init().then(() => self.login("Token"),err => {console.log(err);process.exit();});
+init().then(() => self.login("NDIxNDIyODU2MjMzMjg3Njgw.DY3cOw.Ygn73ovkOsOLnaktgKvnv7L4xeM"),err => {console.log(err);process.exit();});
 
 
 /** Thanks Stackoverflow!
