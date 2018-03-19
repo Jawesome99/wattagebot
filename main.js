@@ -42,6 +42,7 @@ function getUser(id) {
 }
 
 function checkServer() {
+	return setTimeout(() => checkServer(),60000);
 	mcp.ping(wtQuery.host,wtQuery.port,(e, res) => {
 		if (e) throw e;
 		let players = res.players.sample;
@@ -59,7 +60,6 @@ function checkServer() {
 		self.channels.get("421798550083731467").fetchMessage("421818347445813269").then(m => {
 			m.edit({embed});
 		});
-		return setTimeout(() => checkServer(),60000);
 	});
 }
 
