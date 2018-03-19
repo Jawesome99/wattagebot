@@ -336,7 +336,7 @@ process.on("uncaughtException",e => {
 	throw e;
 });
 
-init().then(() => self.login("NDIxNDIyODU2MjMzMjg3Njgw.DY3cOw.Ygn73ovkOsOLnaktgKvnv7L4xeM"),err => {console.log(err);process.exit();});
+init().then(() => self.login("Token"),err => {console.log(err);process.exit();});
 
 
 /** Thanks Stackoverflow!
