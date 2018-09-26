@@ -8,6 +8,7 @@ const prefix = "/";
 self.owners = ["211227683466641408","114165537566752770"]; // Emosewaj, Timber
 self.wtLog = []; addToLog("Logging started");
 const wtQuery = {host:'73.181.125.119',port:25565}
+var lastRes;
 
 function init() {
 	return new Promise((resolve,reject) => {
@@ -43,19 +44,28 @@ function getUser(id) {
 
 function checkServer() {
 	mcp.ping(wtQuery.host,wtQuery.port,(e, res) => {
-		if (e) throw e;
+		if (e) {
+			addToLog(":x: Connection error: " + e); // Experimental
+			res = lastRes;
+		} 
+		else {
+			lastRes = res;
+		}
+			
 		let players = res.players.sample;
 		players = parsePlayers(players);
-		if (players != "") players = "\n**Players online:**\n"+players;
+		if (players == "") players = "None";
 		let embed = new Discord.RichEmbed()
 		.setTitle("Official Server Information")
 		.setDescription(`"${res.description}"\nIP: \`${wtQuery.host}:${wtQuery.port}\``)
-		.addField("Ping (EU):",`${res.ping} ms`)
-		.addField("Players:",`${res.players.online}/${res.players.max}${players}`)
+		.addField("Ping (EU):",`${res.ping} ms`,true)
+		.addField("Players:", `${res.players.online}/${res.players.max}`, true)
+		.addField("Players online:",players)
 		.addField("Log:",self.wtLog.join("\n"))
 		.setThumbnail(self.user.displayAvatarURL)
 		.setFooter(`All times are CET • Today at ${getTime().slice(1,getTime().length-1)}`)
 		.setColor("RED");
+
 		self.channels.get("421798550083731467").fetchMessage("421818347445813269").then(m => {
 			m.edit({embed});
 		});
