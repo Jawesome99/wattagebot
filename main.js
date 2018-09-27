@@ -6,9 +6,24 @@ const self = new Discord.Client();
 const prefix = "/";
 
 self.owners = ["211227683466641408","114165537566752770"]; // Emosewaj, Timber
-self.wtLog = []; addToLog("Logging started");
 const wtQuery = {host:'73.181.125.119',port:25565}
 var lastRes;
+
+try {
+	self.wtErrorLog = JSON.parse(fs.readFileSync("./logs/wtErrorLog.log"));
+} catch (e) {
+	self.wtErrorLog = [];
+	addToErrorLog(":exclamation: Couldn't load wtErrorLog.log: " + e);
+}
+
+try {
+	self.wtLog = JSON.parse(fs.readFileSync("./logs/wtLog.log"));
+} catch (e) {
+	self.wtLog = [];
+	addToErrorLog(":exclamation: Couldn't load wtLog.log: " + e);
+} finally {
+	addToLog(":white_check_mark: Logging started");
+}
 
 function init() {
 	return new Promise((resolve,reject) => {
@@ -45,8 +60,9 @@ function getUser(id) {
 function checkServer() {
 	mcp.ping(wtQuery.host,wtQuery.port,(e, res) => {
 		if (e) {
-			addToLog(":x: Connection error: " + e); // Experimental
+			addToErrorLog(`:x: ${e}`);
 			res = lastRes;
+			res.ping = "`(OFFLINE)` ---";
 		} 
 		else {
 			lastRes = res;
@@ -61,13 +77,17 @@ function checkServer() {
 		.addField("Ping (EU):",`${res.ping} ms`,true)
 		.addField("Players:", `${res.players.online}/${res.players.max}`, true)
 		.addField("Players online:",players)
-		.addField("Log:",self.wtLog.join("\n"))
+		.addField("Log:",parseLog(self.wtLog))
+		.addField("Error Log:",parseLog(self.wtErrorLog))
 		.setThumbnail(self.user.displayAvatarURL)
 		.setFooter(`All times are CET • Today at ${getTime().slice(1,getTime().length-1)}`)
 		.setColor("RED");
 
 		self.channels.get("421798550083731467").fetchMessage("421818347445813269").then(m => {
-			m.edit({embed});
+			m.edit({embed}).then(() => {
+				fs.writeFileSync("./logs/wtLog.log", JSON.stringify(self.wtLog, [], 1));
+				fs.writeFileSync("./logs/wtErrorLog.log", JSON.stringify(self.wtLog, [], 1));
+			});
 		});
 	});
 	return setTimeout(() => checkServer(),60000);
@@ -104,9 +124,19 @@ function parsePlayers(players) {
 	return returnString;
 }
 
+function parseLog(log) {
+	if (log.length == 0) return "\u200B";
+	return log.join("\n");
+}
+
 function addToLog(message) {
-	if (self.wtLog.length = 15) self.wtLog.shift()
-	return self.wtLog.push(`${getTime()} ${message}`);
+	if (self.wtLog.length == 15) self.wtLog.shift();
+	return self.wtLog.push(`\`${getTime()}\` ${message}`);
+}
+
+function addToErrorLog(message) {
+	if (self.wtErrorLog.length == 5) self.wtErrorLog.shift();
+	return self.wtErrorLog.push(`\`${getTime()}\` ${message}`);
 }
 
 function getTime() {
@@ -141,9 +171,10 @@ self.on("message", m => {
 				.addField("/find","Find a specific stargate by name.")
 				.addField("/changeOwner","Change the owner of a stargate.")
 				.addField("/millenaire",`I'll be right there, ${m.author.username}!`)
+				.addField("/flushlog [game|error|all]", "Flushes server logs, default game. Owner-only.")
+				.addField("/restart", "Force-restarts the bot. Owner-only.")
 				.setTimestamp()
 			});
-			break;
 		}
 		case "add": {
 			let messages = [];
@@ -338,6 +369,33 @@ self.on("message", m => {
 		case "millenaire": {
 			// hehe
 			return m.channel.send(`I'll be right there, ${m.author.username}!\n`.repeat(8));
+		}
+		case "flushlog": {
+			if (!self.owners.includes(m.author.id)) return m.channel.send("No permission!");
+			switch (args[0]) {
+				case "error": {
+					self.wtErrorLog = [];
+					fs.writeFileSync("./logs/wtErrorLog.log", "[]");
+					return m.channel.send("Error log flushed!");
+				}
+				case "all": {
+					self.wtLog = [];
+					self.wtErrorLog = [];
+					fs.writeFileSync("./logs/wtLog.log", "[]");
+					fs.writeFileSync("./logs/wtErrorLog.log", "[]");
+					return m.channel.send("All logs flushed!");
+				}
+				case "game":
+				default: {
+					self.wtLog = [];
+					fs.writeFileSync("./logs/wtLog.log", "[]");
+					return m.channel.send("Game log flushed!");
+				}
+			}
+		}
+		case "restart": {
+			if (!self.owners.includes(m.author.id)) return m.channel.send("No permission!");
+			return m.channel.send("Restarting...").then(() => self.destroy().then(() => process.exit(0)));
 		}
 	}
 });
