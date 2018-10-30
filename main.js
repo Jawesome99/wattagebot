@@ -6,8 +6,8 @@ const self = new Discord.Client();
 const prefix = "/";
 
 self.owners = ["211227683466641408","114165537566752770"]; // Emosewaj, Timber
-const wtQuery = {host:'73.181.125.119',port:25565}
-var lastRes;
+const wtQuery = {host:'73.181.125.119',port:25565};
+var lastRes, serverStatus;
 
 try {
 	self.wtErrorLog = JSON.parse(fs.readFileSync("./logs/wtErrorLog.log"));
@@ -22,7 +22,17 @@ try {
 	self.wtLog = [];
 	addToErrorLog(":exclamation: Couldn't load wtLog.log: " + e);
 } finally {
-	addToLog(":white_check_mark: Logging started");
+	addToLog(":white_check_mark: Error logging started");
+	addToLog(":white_check_mark: Player logging started");
+}
+
+try {
+	self.wtEventLog = JSON.parse(fs.readFileSync("./logs/wtEventLog.log"));
+} catch (e) {
+	self.wtEventLog = [];
+	addToErrorLog(":exclamation: Couldn't load wtEventLog.log: " + e);
+} finally {
+	addToLog(":white_check_mark: Event logging started");
 }
 
 function init() {
@@ -63,9 +73,22 @@ function checkServer() {
 			addToErrorLog(`:x: ${e}`);
 			res = lastRes;
 			res.ping = "`(OFFLINE)` ---";
+			if (!serverStatus || serverStatus == "online") {
+				serverStatus = "offline";
+				addToEventLog(":no_entry_sign: Server unreachable");
+			}
 		} 
 		else {
 			lastRes = res;
+			if (!serverStatus || serverStatus == "offline") {
+				serverStatus = "online";
+				addToEventLog(":signal_strength: Server online");
+			}
+		}
+
+		if (getTime() == "[00:00]") {
+			addToLog(":calendar_spiral: " + new Date().toDateString());
+			addToErrorLog(":calendar_spiral: " + new Date().toDateString());
 		}
 			
 		let players = res.players.sample;
@@ -79,6 +102,7 @@ function checkServer() {
 		.addField("Players online:",players)
 		.addField("Log:",parseLog(self.wtLog))
 		.addField("Error Log:",parseLog(self.wtErrorLog))
+		.addField("Event Log:",parseLog(self.wtEventLog))
 		.setThumbnail(self.user.displayAvatarURL)
 		.setFooter(`All times are CET • Today at ${getTime().slice(1,getTime().length-1)}`)
 		.setColor("RED");
@@ -86,7 +110,8 @@ function checkServer() {
 		self.channels.get("421798550083731467").fetchMessage("421818347445813269").then(m => {
 			m.edit({embed}).then(() => {
 				fs.writeFileSync("./logs/wtLog.log", JSON.stringify(self.wtLog, [], 1));
-				fs.writeFileSync("./logs/wtErrorLog.log", JSON.stringify(self.wtLog, [], 1));
+				fs.writeFileSync("./logs/wtErrorLog.log", JSON.stringify(self.wtErrorLog, [], 1));
+				fs.writeFileSync("./logs/wtEventLog.log", JSON.stringify(self.wtEventLog, [], 1));
 			});
 		});
 	});
@@ -139,6 +164,11 @@ function addToErrorLog(message) {
 	return self.wtErrorLog.push(`\`${getTime()}\` ${message}`);
 }
 
+function addToEventLog(message) {
+	if (self.wtEventLog.length == 5) self.wtEventLog.shift();
+	return self.wtEventLog.push(`\`${getTime()}\` ${message}`);
+}
+
 function getTime() {
 	let date = new Date();
 	let hour = date.getHours().toString(); if(hour.length == 1){hour = ("0"+hour)}
@@ -171,7 +201,7 @@ self.on("message", m => {
 				.addField("/find","Find a specific stargate by name.")
 				.addField("/changeOwner","Change the owner of a stargate.")
 				.addField("/millenaire",`I'll be right there, ${m.author.username}!`)
-				.addField("/flushlog [game|error|all]", "Flushes server logs, default game. Owner-only.")
+				.addField("/flushlog [game|error|event|all]", "Flushes server logs, default game. Owner-only.")
 				.addField("/restart", "Force-restarts the bot. Owner-only.")
 				.setTimestamp()
 			});
@@ -373,6 +403,11 @@ self.on("message", m => {
 		case "flushlog": {
 			if (!self.owners.includes(m.author.id)) return m.channel.send("No permission!");
 			switch (args[0]) {
+				case "event": {
+					self.wtEventLog = [];
+					fs.writeFileSync("./logs/wtEventLog.log", "[]");
+					return m.channel.send("Event log flushed!");
+				}
 				case "error": {
 					self.wtErrorLog = [];
 					fs.writeFileSync("./logs/wtErrorLog.log", "[]");
@@ -381,8 +416,10 @@ self.on("message", m => {
 				case "all": {
 					self.wtLog = [];
 					self.wtErrorLog = [];
+					self.wtEventLog = [];
 					fs.writeFileSync("./logs/wtLog.log", "[]");
 					fs.writeFileSync("./logs/wtErrorLog.log", "[]");
+					fs.writeFileSync("./logs/wtEventLog.log", "[]");
 					return m.channel.send("All logs flushed!");
 				}
 				case "game":
