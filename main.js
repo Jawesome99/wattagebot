@@ -89,6 +89,7 @@ function checkServer() {
 		if (getTime() == "[00:00]") {
 			addToLog(":calendar_spiral: " + new Date().toDateString());
 			addToErrorLog(":calendar_spiral: " + new Date().toDateString());
+			addToEventLog(":calendar_spiral: " + new Date().toDateString());
 		}
 			
 		let players = res.players.sample;
