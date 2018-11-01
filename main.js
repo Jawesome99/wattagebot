@@ -43,6 +43,13 @@ function init() {
 			for (i = 0; i < initGates.length; i++) {
 				self.addressBook.set(initGates[i].address, new Wattage.Stargate(initGates[i]));
 			}
+
+			self.notifies = new Discord.Collection();
+			let initNotifies = require("./notifies.json");
+			for (let i = 0; i < initNotifies.length; i++) {
+				self.notifies.set(initNotifies[i].id, new Wattage.Notifier(initNotifies[i]));
+			}
+
 			resolve();
 		} catch(err) {
 			reject(err);
@@ -56,6 +63,14 @@ function saveAddressBook() {
 		saveGates.push(Gate);
 	});
 	fs.writeFileSync("./gates.json",JSON.stringify(saveGates,"",1),"utf8");
+}
+
+function saveNotifies() {
+	let notifies = [];
+	self.notifies.forEach(User => {
+		notifies.push(User);
+	});
+	fs.writeFileSync("./notifies.json",JSON.stringify(notifies,"",1),"utf8");
 }
 
 function firstCharUpper(string) {
@@ -74,15 +89,21 @@ function checkServer() {
 			res = lastRes;
 			res.ping = "`(OFFLINE)` ---";
 			if (!serverStatus || serverStatus == "online") {
-				serverStatus = "offline";
 				addToEventLog(":no_entry_sign: Server unreachable");
+				if (serverStatus) {
+					notify("offline");
+				}
+				serverStatus = "offline";
 			}
 		} 
 		else {
 			lastRes = res;
 			if (!serverStatus || serverStatus == "offline") {
-				serverStatus = "online";
 				addToEventLog(":signal_strength: Server online");
+				if (serverStatus) {
+					notify("online");
+				}
+				serverStatus = "online";
 			}
 		}
 
@@ -177,6 +198,39 @@ function getTime() {
 	return (`[${hour}:${minute}]`);
 }
 
+function notify(status) {
+	switch (status) {
+		case "online": {
+			self.notifies.forEach(Setting => {
+				if (Setting.notifyOnline) {
+					let user = self.users.get(Setting.id);
+					if (!user) {
+						self.notifies.delete(Setting.id);
+					} else {
+						user.send("The server is now **online**!");
+					}
+				}
+			});
+			break;
+		}
+		case "offline": {
+			self.notifies.forEach(Setting => {
+				if (Setting.notifyOffline) {
+					let user = self.users.get(Setting.id);
+					if (!user) {
+						self.notifies.delete(Setting.id);
+					} else {
+						user.send("The server is now **offline**!");
+					}
+				}
+			});
+			break;
+		}
+		default: return;
+	}
+}
+
+/* ============================================================================= */
 
 self.on("ready", () => {
 	self.user.setActivity("Wattage");
@@ -201,6 +255,7 @@ self.on("message", m => {
 				.addField("/list","List all public stargates.")
 				.addField("/find","Find a specific stargate by name.")
 				.addField("/changeOwner","Change the owner of a stargate.")
+				.addField("/notify <online|offline|status|delete>", "Get notified when the server goes online or offline.")
 				.addField("/millenaire",`I'll be right there, ${m.author.username}!`)
 				.addField("/flushlog [game|error|event|all]", "Flushes server logs, default game. Owner-only.")
 				.addField("/restart", "Force-restarts the bot. Owner-only.")
@@ -434,6 +489,52 @@ self.on("message", m => {
 		case "restart": {
 			if (!self.owners.includes(m.author.id)) return m.channel.send("No permission!");
 			return m.channel.send("Restarting...").then(() => self.destroy().then(() => process.exit(0)));
+		}
+		case "notify": {
+			let responses = {
+				offline: "goes offline",
+				online: "comes online"
+			}
+
+			let userSettings;
+			if (self.notifies.has(m.author.id)) {
+				userSettings = self.notifies.get(m.author.id);
+			} else {
+				userSettings = new Wattage.Notifier({id: m.author.id, notifyOnline: false, notifyOffline: false})
+			}
+
+			var result;
+			switch (args[0]) {
+				case "online": {
+					result = userSettings.toggleOnline();
+					break;
+				}
+				case "offline": {
+					result = userSettings.toggleOffline();
+					break;
+				}
+				case "status": {
+					let string = `__Your notification setings:__\nNotify when online: ${userSettings.notifyOnline}\nNotify when offline: ${userSettings.notifyOffline}`;
+					for (let i = 0; i < 2; i++) {
+						string = string.replace("true", ":white_check_mark:").replace("false", ":x:");
+					}
+					return m.channel.send(string);
+				}
+				case "delete": {
+					self.notifies.delete(m.author.id);
+					saveNotifies();
+					return m.channel.send("Deleted your settings! Run the /notify command again to create new settings.");
+				}
+				default: return;
+			}
+
+			self.notifies.set(userSettings.id, userSettings);
+			saveNotifies();
+			if (result == 1) {
+				return m.channel.send(`I will now notify you when the server ${responses[args[0]]}!`);
+			} else if (result == 0) {
+				return m.channel.send(`I will no longer notify you when the server ${responses[args[0]]}!`);
+			}
 		}
 	}
 });
