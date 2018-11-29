@@ -6,7 +6,7 @@ const self = new Discord.Client();
 const prefix = "/";
 
 self.owners = ["211227683466641408","114165537566752770"]; // Emosewaj, Timber
-const wtQuery = {host:'73.181.125.119',port:25565};
+const wtQuery = {host:'24.9.122.174',port:25565};
 var lastRes, serverStatus;
 
 try {
@@ -543,7 +543,7 @@ process.on("uncaughtException",e => {
 	throw e;
 });
 
-init().then(() => self.login("Token"),err => {console.log(err);process.exit();});
+init().then(() => self.login("TOKEN"),err => {console.log(err);process.exit();});
 
 
 /** Thanks Stackoverflow!
